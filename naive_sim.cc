@@ -8,7 +8,7 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 
 	std::vector<std::vector<uint64_t>> ram_buffers(pp.rams.size());
 	for(auto i = 0u; i < pp.rams.size(); ++i) {
-		ram_buffers[i] = std::vector<uint64_t>(1 << pp.rams[i].address_width);
+		ram_buffers[i] = std::vector<uint64_t>(1ull << pp.rams[i].address_width);
 	}
 
 	const std::vector<std::vector<uint64_t>> rom_buffers = rom_bufs;
@@ -52,7 +52,8 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 				case RAMFETCH:
 					{uint64_t ramid  = get_argval(inst.argv[0]);
 					uint64_t addr   = get_argval(inst.argv[1]);
-					lhs_ref = ram_buffers[ramid][addr]; break;}
+					uint64_t ramsize = ram_buffers[ramid].size();
+					lhs_ref = ram_buffers[ramid][addr % ramsize]; break;}
 				case CONCAT: /* les constantes sont obligatoirement de taille 1. Normalement ça va. */
 					{uint64_t left  = get_argval(inst.argv[0]);
 					uint64_t right = get_argval(inst.argv[1]);
@@ -69,9 +70,9 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 					lhs_ref = v >> index; break;}
 				case MUX:
 					if(get_argval(inst.argv[0]) & 1) {
-						lhs_ref = get_argval(inst.argv[1]);
-					} else {
 						lhs_ref = get_argval(inst.argv[2]);
+					} else {
+						lhs_ref = get_argval(inst.argv[1]);
 					}
 			}	
 		}
