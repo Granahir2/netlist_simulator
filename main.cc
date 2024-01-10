@@ -63,8 +63,23 @@ int main(int argc, char** argv) {
 							std::cerr << "Unable to open ROM file" << &argv[i][2] << std::endl;
 							return 1;
 						}
-						fs.read(reinterpret_cast<char*>(loaded_roms[rcnt].data()),
-							loaded_roms[rcnt].size()*sizeof(uint64_t));
+						auto word_size = pp.roms[rcnt].data_width;
+						auto word_cnt  = loaded_roms[rcnt].size();
+						if(word_size % 8 != 0) {
+							std::cerr << "ROM loading where data width is not a multiple of a byte is not supported" << std::endl;
+						}
+						uint8_t* buffer = new uint8_t[word_cnt * word_size/8];
+						fs.read(reinterpret_cast<char*>(buffer), word_cnt * word_size/8);
+						for(unsigned i = 0; i < word_cnt; i += 1) {
+							uint64_t eff_word = 0;
+							for(unsigned j = 0; j < word_size/8; ++j) { // Words are stored little-endian
+								eff_word |= (buffer[i*word_size/8 + j] << (j*8));
+							}
+							loaded_roms[rcnt][i] = eff_word;
+						}
+
+						delete buffer;
+						log_out << "Loaded " << fs.gcount() << " bytes of ROM\n";
 						rcnt++;
 					} else {
 						std::cerr << "Too many ROM giles given. (Expected "

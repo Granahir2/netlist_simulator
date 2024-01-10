@@ -26,7 +26,7 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 			}
 		}
 
-		auto get_argval = [&](arg a){if(a.is_cst) {return a.value;} else {return double_buffer[currb][a.value];}};
+		auto get_argval = [&](arg a){if(a.is_cst) {return a.value;} else {return double_buffer[currb].at(a.value);}};
 
 		for(auto inst : pp.code) {
 			uint64_t& lhs_ref = double_buffer[currb][inst.lhs_id];
@@ -48,13 +48,14 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 				case ROMFETCH:
 					{uint64_t romid  = get_argval(inst.argv[0]);
 					uint64_t addr   = get_argval(inst.argv[1]);
-					lhs_ref = rom_buffers[romid][addr]; break;}
+					uint64_t romsize = rom_buffers[romid].size();
+					lhs_ref = rom_buffers[romid][addr % romsize]; break;}
 				case RAMFETCH:
 					{uint64_t ramid  = get_argval(inst.argv[0]);
 					uint64_t addr   = get_argval(inst.argv[1]);
 					uint64_t ramsize = ram_buffers[ramid].size();
 					lhs_ref = ram_buffers[ramid][addr % ramsize]; break;}
-				case CONCAT: /* les constantes sont obligatoirement de taille 1. Normalement ça va. */
+				case CONCAT: /* les constantes sont implicitement de taille 1 ici. Normalement ça va. */
 					{uint64_t left  = get_argval(inst.argv[0]);
 					uint64_t right = get_argval(inst.argv[1]);
 					int delta = inst.argv[0].is_cst ? 1 : pp.id_widths[inst.argv[0].value];
@@ -85,8 +86,9 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 
 		for(auto i = 0u; i < pp.rams.size(); ++i) {
 			auto r = pp.rams[i];
-			if(get_argval(r.we_node)) {
-				ram_buffers[i][get_argval(r.waddr_node)] = get_argval(r.wdata_node);
+			if(get_argval(r.we_node) & 1) {
+				auto s = ram_buffers[i].size();
+				ram_buffers[i][get_argval(r.waddr_node) % s] = get_argval(r.wdata_node);
 			}
 		}
 	}
