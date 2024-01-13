@@ -2,7 +2,7 @@
 #include <istream>
 #include "naive_sim.hh"
 
-void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64_t>>& rom_bufs, std::istream& i_strm, int nstep) {
+void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64_t>>& rom_bufs, std::istream& i_strm, const std::vector<unsigned>& to_output, int nstep) {
 	int N = pp.idents.size();
 	std::array<std::vector<uint64_t>, 2> double_buffer = {std::vector<uint64_t>(N, 0), std::vector<uint64_t>(N, 0)};
 
@@ -78,10 +78,18 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 			}	
 		}
 
+		if(to_output.size() == 0) {
 		for(auto i = 0u; i < pp.output_number; ++i) {
 			std::cout << pp.idents[pp.input_number + i] << " = "
 				  << get_argval({false, pp.input_number+i}) % (1ull << pp.id_widths[pp.input_number+i])
-				  << ((i == pp.output_number - 1) ? "\n" : ", ");
+				  << ((i == pp.output_number - 1) ? "\n" : ",\t");
+		}
+		} else {
+		for(auto i = 0u; i < to_output.size(); ++i) {
+			std::cout << pp.idents[pp.input_number + to_output[i]] << " = "
+				  << get_argval({false, pp.input_number+to_output[i]}) % (1ull << pp.id_widths[pp.input_number+to_output[i]])
+				  << ((i == to_output.size() - 1) ? "\n" : ",\t");
+		}
 		}
 
 		for(auto i = 0u; i < pp.rams.size(); ++i) {

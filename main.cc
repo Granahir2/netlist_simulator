@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
 
 	std::ifstream inputs;
 
+	std::vector<unsigned> to_output;
 	for(auto i = 0; i < argc; ++i) {
 		if(argv[i][0] == '-' && argv[i][1] != '\0') {
 			switch(argv[i][1]) {
@@ -79,7 +80,9 @@ int main(int argc, char** argv) {
 						}
 
 						delete buffer;
-						log_out << "Loaded " << fs.gcount() << " bytes of ROM\n";
+						if(produce_logs) {
+							log_out << "Loaded " << fs.gcount() << " bytes of ROM\n";
+						}
 						rcnt++;
 					} else {
 						std::cerr << "Too many ROM giles given. (Expected "
@@ -91,12 +94,19 @@ int main(int argc, char** argv) {
 					if(!inputs) {
 						std::cerr << "Unable to open input file " << &argv[i][2] << std::endl;
 						return 1;
+					} break;
+				case 'o':
+					auto x = std::string(&argv[i][2]);
+					for(unsigned i = pp.input_number; i < pp.input_number + pp.output_number; ++i) {
+						if(x == pp.idents[i]) {
+							to_output.push_back(i);
+						}
 					}
 			}
 		}
 	}	
 
-	naive_simulation(pp, loaded_roms, inputs, nstep);
+	naive_simulation(pp, loaded_roms, inputs, to_output, nstep);
 	
 	return 0;
 }
