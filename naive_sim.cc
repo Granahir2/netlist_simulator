@@ -86,8 +86,8 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 		}
 		} else {
 		for(auto i = 0u; i < to_output.size(); ++i) {
-			std::cout << pp.idents[pp.input_number + to_output[i]] << " = "
-				  << get_argval({false, pp.input_number+to_output[i]}) % (1ull << pp.id_widths[pp.input_number+to_output[i]])
+			std::cout << pp.idents[to_output[i]] << " = "
+				  << get_argval({false, to_output[i]}) % (1ull << pp.id_widths[to_output[i]])
 				  << ((i == to_output.size() - 1) ? "\n" : ",\t");
 		}
 		}
