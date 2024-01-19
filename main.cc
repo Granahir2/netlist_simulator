@@ -51,12 +51,19 @@ int main(int argc, char** argv) {
 	std::ifstream inputs;
 
 	std::vector<unsigned> to_output;
+	std::vector<unsigned> to_clock; // Do 1PPS signal
+	unsigned lenout = 0;
+	bool fast = false;
 	for(auto i = 0; i < argc; ++i) {
 		if(argv[i][0] == '-' && argv[i][1] != '\0') {
 			switch(argv[i][1]) {
 				case 'n':
 					nstep = std::stoi(&argv[i][2]);
 					break;
+				case 'w':
+					lenout = std::stoi(&argv[i][2]); break;
+				case 'f':
+					fast = true; break;
 				case 'r':
 					if(rcnt < pp.roms.size()) {
 						std::ifstream fs(&argv[i][2], std::ios::in | std::ios::binary);
@@ -96,17 +103,22 @@ int main(int argc, char** argv) {
 						return 1;
 					} break;
 				case 'o':
-					auto x = std::string(&argv[i][2]);
+					{auto x = std::string(&argv[i][2]);
 					for(unsigned i = pp.input_number; i < pp.input_number + pp.output_number; ++i) {
-						if(x == pp.idents[i]) {
-							to_output.push_back(i);
-						}
-					}
+						if(x == pp.idents[i]) {to_output.push_back(i);}
+						if(i == pp.input_number - 1) {std::cerr << "Unable to find output " << x << std::endl;}
+					}} break;
+				case 'c':
+					{auto x = std::string(&argv[i][2]);
+					for(unsigned i = 0; i < pp.input_number; ++i) {
+						if(x == pp.idents[i]) {to_clock.push_back(i); break;}
+						if(i == pp.input_number - 1) {std::cerr << "Unable to find input " << x << std::endl;}
+					}} break;
 			}
 		}
 	}	
 
-	naive_simulation(pp, loaded_roms, inputs, to_output, nstep);
+	naive_simulation(pp, loaded_roms, inputs, to_output, to_clock, fast, lenout, nstep);
 	
 	return 0;
 }

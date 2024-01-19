@@ -1,8 +1,11 @@
 #include <array>
 #include <istream>
+#include <ctime>
 #include "naive_sim.hh"
 
-void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64_t>>& rom_bufs, std::istream& i_strm, const std::vector<unsigned>& to_output, int nstep) {
+void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64_t>>& rom_bufs,
+std::istream& i_strm, const std::vector<unsigned>& to_output, const std::vector<unsigned>& to_clock,
+bool fast, unsigned lenout, int nstep) {
 	int N = pp.idents.size();
 	std::array<std::vector<uint64_t>, 2> double_buffer = {std::vector<uint64_t>(N, 0), std::vector<uint64_t>(N, 0)};
 
@@ -11,11 +14,12 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 		ram_buffers[i] = std::vector<uint64_t>(1ull << pp.rams[i].address_width);
 	}
 
-	const std::vector<std::vector<uint64_t>> rom_buffers = rom_bufs;
+	std::time_t last_t = std::time(nullptr);
 
+	const std::vector<std::vector<uint64_t>> rom_buffers = rom_bufs;
 	for(int s = 0; (nstep == -1) ? true : s < nstep; ++s) {
 		int currb = s % 2;					// Initialisation des entrées
-		for(auto i = 0u; i < pp.input_number; ++i) {	
+		for(auto i = 0u; i < pp.input_number; ++i) {
 			i_strm.read(reinterpret_cast<char*>(&double_buffer[currb][i]), sizeof(uint64_t));
 			if(!i_strm) {
 				std::cout << pp.idents[i] << " ? ";
@@ -23,6 +27,13 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 				std::cin >> w;
 				auto l = std::stoull(w, nullptr, 2);
 				double_buffer[currb][i] = l;
+			}
+		}
+
+		std::time_t curr_t = std::time(nullptr);
+		if(curr_t - last_t != 0 || fast) {last_t = curr_t;
+			for(auto id : to_clock) {
+				double_buffer[currb][id] = 1ull; // Forcefully clock
 			}
 		}
 
@@ -78,6 +89,23 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 			}	
 		}
 
+		
+		for(auto i = 0u; i < pp.rams.size(); ++i) {
+			auto r = pp.rams[i];
+			if(get_argval(r.we_node) & 1) {
+				auto s = ram_buffers[i].size();
+				ram_buffers[i][get_argval(r.waddr_node) % s] = get_argval(r.wdata_node);
+			}
+			// TODO make that *safer*
+			if(lenout != 0) {
+			auto w = r.data_width/8;
+			for(auto j = 0u; j < (ram_buffers[i].size()*w) && j < lenout; ++j) {
+				std::cout << (char)((ram_buffers[i][j / w] >> ((j % w)*8))&0xff);
+			}
+			std::cout << '\t';
+			}
+		}
+
 		if(to_output.size() == 0) {
 		for(auto i = 0u; i < pp.output_number; ++i) {
 			std::cout << pp.idents[pp.input_number + i] << " = "
@@ -91,13 +119,6 @@ void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64
 				  << ((i == to_output.size() - 1) ? "\n" : ",\t");
 		}
 		}
-
-		for(auto i = 0u; i < pp.rams.size(); ++i) {
-			auto r = pp.rams[i];
-			if(get_argval(r.we_node) & 1) {
-				auto s = ram_buffers[i].size();
-				ram_buffers[i][get_argval(r.waddr_node) % s] = get_argval(r.wdata_node);
-			}
-		}
+		
 	}
 } 
