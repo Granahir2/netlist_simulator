@@ -20,12 +20,32 @@ le cycle d'exécution concerné.
 notamment le résultat du parsage, du scheduling ainsi que les tables de symboles. Si cette option
 est activée sans qu'un fichier journal ne soit spécifier les informations sont exfiltrées sur `clog`.
 
-Si plusieurs options `-i` ou `-n` sont spécifiées c'est la dernière qui fait foi. Remarquons que les chemins
-et les entiers sont _affixés_ sans espace._
+- `-o<x>` qui stipule que la sortie `x` de la netlist sera affichée après chaque cycle de simulation.
+Si aucune option n'est spécifiée, par défaut toutes les sorties sont affichées, dans l'ordre de définition
+dans la netlist.
+
+- `-q` change l'option par défaut précédente : si `-q` est présent et aucune spécification `-o` n'apparaît
+alors la sortie ne comporte aucune des sorties de la netlist.
+
+- `-w<x>` fait afficher les `x` premiers octets de la première RAM comme des caractères ASCII lors de chaque cycle de simulation.
+
+- `-r<x>` charge le début du fichier `x` dans une ROM de la netlist. Si la netlist admet plusieurs ROMs,
+elles sont chargées dans l'ordre de spécification.
+
+- `-g<x>` charge la chaîne terminée par '\\0' x dans la RAM. Seule charger la première RAM est supportée.
+Cela a pour but de passer des arguments complexes à la netlist.
+
+- `-c<x>` enregistre l'entrée `x` dans le système d'horloge : à chaque seconde, l'entrée sera asservie de force
+pendant un cycle. Cette option a priorité sur l'entrée. 
+
+- `-f` bascule le système d'horloge en mode rapide : les entrées enregistrées par `-c` sont tout le temps asservies.
+
+Si plusieurs options autres que `-o` sont spécifiées c'est la dernière qui fait foi. Remarquons que les chemins
+et les entiers sont _affixés_ sans espace.
 En cas d'exécution normale l'exécutable renvoie 0; il renvoie 1 si n'importe quelle erreur est rencontrée,
 y compris si la netlist n'est pas valide.
 
-## Rapport
+## Rapport (8/11/23)
 
 Étant donné la simplicité du format de netlist, le parseur est directement implémenté. Toutes les instructions
 sont encodées par un type unique d'instruction, une énumération permettant de leur donner de la sémantique ainsi

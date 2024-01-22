@@ -51,9 +51,13 @@ int main(int argc, char** argv) {
 	std::ifstream inputs;
 
 	std::vector<unsigned> to_output;
+	bool no_output_default = false;
 	std::vector<unsigned> to_clock; // Do 1PPS signal
+	
 	unsigned lenout = 0;
+	char* preload_str = nullptr;
 	bool fast = false;
+	
 	for(auto i = 0; i < argc; ++i) {
 		if(argv[i][0] == '-' && argv[i][1] != '\0') {
 			switch(argv[i][1]) {
@@ -64,6 +68,15 @@ int main(int argc, char** argv) {
 					lenout = std::stoi(&argv[i][2]); break;
 				case 'f':
 					fast = true; break;
+				case 'g':
+					preload_str = &argv[i][2];
+					if(pp.rams.size() == 0) {std::cerr << "No RAM to preload" << std::endl; return 1;}
+					if(pp.rams[0].data_width % 8 != 0) {
+						std::cerr << "RAM preloading where data width is not a multiply of a byte is not supported" << std::endl;
+					} break;
+				case 'q':	
+					no_output_default = true;
+					break;
 				case 'r':
 					if(rcnt < pp.roms.size()) {
 						std::ifstream fs(&argv[i][2], std::ios::in | std::ios::binary);
@@ -118,7 +131,13 @@ int main(int argc, char** argv) {
 		}
 	}	
 
-	naive_simulation(pp, loaded_roms, inputs, to_output, to_clock, fast, lenout, nstep);
+	if(to_output.size() == 0 && !no_output_default) {
+		for(unsigned i = pp.input_number; i < pp.input_number + pp.output_number; ++i) {
+			to_output.push_back(i);
+		}
+	}
+
+	naive_simulation(pp, loaded_roms, inputs, to_output, to_clock, preload_str, fast, lenout, nstep);
 	
 	return 0;
 }

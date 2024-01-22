@@ -3,8 +3,10 @@
 #include <ctime>
 #include "naive_sim.hh"
 
-void naive_simulation(scheduled_program pp, const std::vector<std::vector<uint64_t>>& rom_bufs,
-std::istream& i_strm, const std::vector<unsigned>& to_output, const std::vector<unsigned>& to_clock,
+void naive_simulation(scheduled_program pp,
+const std::vector<std::vector<uint64_t>>& rom_bufs, std::istream& i_strm,
+const std::vector<unsigned>& to_output, const std::vector<unsigned>& to_clock,
+const char* preload_str, 
 bool fast, unsigned lenout, int nstep) {
 	int N = pp.idents.size();
 	std::array<std::vector<uint64_t>, 2> double_buffer = {std::vector<uint64_t>(N, 0), std::vector<uint64_t>(N, 0)};
@@ -12,6 +14,20 @@ bool fast, unsigned lenout, int nstep) {
 	std::vector<std::vector<uint64_t>> ram_buffers(pp.rams.size());
 	for(auto i = 0u; i < pp.rams.size(); ++i) {
 		ram_buffers[i] = std::vector<uint64_t>(1ull << pp.rams[i].address_width);
+	}
+
+	if(pp.rams.size() > 0 && preload_str != nullptr) {
+		bool stop = false;		
+		auto word_cnt  = ram_buffers[0].size();
+		auto word_size = pp.rams[0].data_width;
+		for(unsigned i = 0; i < word_cnt && !stop; i += 1) {
+			uint64_t eff_word = 0;
+			for(unsigned j = 0; j < word_size/8 && !stop; ++j) { // Words are stored little-endian
+				eff_word |= (preload_str[i*word_size/8 + j] << (j*8));
+				if(preload_str[i*word_size/8 + j] == '\0') {stop = true;}
+			}
+			ram_buffers[0][i] = eff_word;
+		}
 	}
 
 	std::time_t last_t = std::time(nullptr);
@@ -31,7 +47,7 @@ bool fast, unsigned lenout, int nstep) {
 		}
 
 		std::time_t curr_t = std::time(nullptr);
-		if(curr_t - last_t != 0 || fast) {last_t = curr_t;
+		if(fast || curr_t - last_t != 0) {last_t = curr_t;
 			for(auto id : to_clock) {
 				double_buffer[currb][id] = 1ull; // Forcefully clock
 			}
@@ -98,27 +114,19 @@ bool fast, unsigned lenout, int nstep) {
 			}
 			// TODO make that *safer*
 			if(lenout != 0) {
-			auto w = r.data_width/8;
-			for(auto j = 0u; j < (ram_buffers[i].size()*w) && j < lenout; ++j) {
-				std::cout << (char)((ram_buffers[i][j / w] >> ((j % w)*8))&0xff);
-			}
-			std::cout << '\t';
-			}
-		}
-
-		if(to_output.size() == 0) {
-		for(auto i = 0u; i < pp.output_number; ++i) {
-			std::cout << pp.idents[pp.input_number + i] << " = "
-				  << get_argval({false, pp.input_number+i}) % (1ull << pp.id_widths[pp.input_number+i])
-				  << ((i == pp.output_number - 1) ? "\n" : ",\t");
-		}
-		} else {
-		for(auto i = 0u; i < to_output.size(); ++i) {
-			std::cout << pp.idents[to_output[i]] << " = "
-				  << get_argval({false, to_output[i]}) % (1ull << pp.id_widths[to_output[i]])
-				  << ((i == to_output.size() - 1) ? "\n" : ",\t");
-		}
+				auto w = r.data_width/8;
+				for(auto j = 0u; j < (ram_buffers[i].size()*w) && j < lenout; ++j) {
+					std::cout << (char)((ram_buffers[i][j / w] >> ((j % w)*8))&0xff);
+				}
+					std::cout << '\t';
+				}
 		}
 		
+		for(auto i = 0u; i < to_output.size(); ++i) {
+			std::cout << pp.idents[to_output[i]] << " = "
+				  << get_argval({false, to_output[i]}) % (1ull << pp.id_widths[to_output[i]]);
+			if(i != to_output.size() - 1) {std::cout << ",\t";}
+		}
+		std::cout << '\n';	
 	}
 } 
